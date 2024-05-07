@@ -12,6 +12,50 @@ from average_errors import average_errors
 from short_interval import short_interval
 from brightest_spot import brightest_spot
 from scale_model import scale_model
+from model_data import model_shortening
+
+path = 'C:/Users/dansf/OneDrive/Documents/KTH/Thesis/Code/JWST-Jupiter/Jupiter/Data/'
+files = ['200-200.txt', '200-600.txt', '200-1000.txt', '600-200.txt', '600-600.txt', '600-1000.txt', '1000-200.txt', '1000-600.txt', '1000-1000.txt']
+flux = np.empty((len(files)), dtype=object)
+waves = np.empty((len(files)), dtype=object)
+
+
+for i in range(len(files)):
+    filepath = path + files[i]
+    with open(filepath,'r') as file:
+        lines = file.readlines()
+
+    wavenumber = []
+    absorption_intensity1 = []
+    vacuum_wavelength = []
+    column_density = []
+    stuff = []
+
+    for line in lines:
+        data = line.split()
+
+        wavenumber.append(float(data[0]))
+        absorption_intensity1.append(float(data[1]))
+        vacuum_wavelength.append(float(data[2]))
+        column_density.append(float(data[3]))
+        stuff.append(data[4])
+
+    wavenumber = np.array(wavenumber)
+    absorption_intensity1 = np.array(absorption_intensity1)
+    vacuum_wavelength = np.array(vacuum_wavelength)
+    column_density = np.array(column_density)
+    stuff = np.array(stuff)
+    vacuum_wavelength = vacuum_wavelength*1e-10
+    low_limit = 4.5e-06
+    up_limit = 5e-06
+    model_wave_short,model_flux_short = model_shortening(vacuum_wavelength, low_limit, up_limit, column_density)
+
+    #flux[i] = model_flux_short
+    #waves[i] = model_wave_short
+    flux[i] = absorption_intensity1
+    waves[i] = vacuum_wavelength
+
+
 
 with open('C:/Users/dansf/OneDrive/Documents/KTH/Thesis/Code/JWST-Jupiter/Jupiter/Data/h3_generated1.txt','r') as file:
     lines = file.readlines()
@@ -92,6 +136,7 @@ for i in range(len(files)):
     nrs_interval[i,0] = dist1/nrs_data[i,0].shape[0]
     nrs_interval[i,1] = dist2/nrs_data[i,1].shape[0]
 
+
 nrs_wave = np.empty((len(files),2), dtype=object)
 
 for i in range(len(files)):
@@ -129,7 +174,7 @@ for i in range(len(files)):
         if nrs2_avg[k] < -100 and k!=0:
             nrs2_avg[k] = nrs2_avg[k-1]
             
-    scaled_model = scale_model(column_density,nrs2_avg,vacuum_wavelength,nrs_wave[i,1])
+    scaled_model = scale_model(flux[0],nrs1_avg, nrs2_avg,waves[0],nrs_wave[i,1])
 
 
     error = nrs_error[i,0][:,26,30]
@@ -149,7 +194,7 @@ for i in range(len(files)):
     plt.figure(i)
     plt.plot(nrs_wave[i,0],nrs1_avg,color='blue')
     plt.plot(nrs_wave[i,1],nrs2_avg,color='green')
-    plt.plot(vacuum_wavelength,scaled_model,color='red', linestyle='--', alpha=0.5)
+    plt.plot(waves[0],scaled_model,color='red', linestyle='--', alpha=0.5)
     '''plt.figure(i)
     plt.plot(nrs_wave[i,0],nrs_data[i,0][:,26,30])
     plt.plot(vacuum_wavelength,column_density)'''
@@ -179,7 +224,7 @@ for i in range(len(files)):
         if nrs2_avg[k] < -100 and k!=0:
             nrs2_avg[k] = nrs2_avg[k-1]
         
-    scaled_model = scale_model(column_density,nrs2_avg,vacuum_wavelength,nrs_wave[i,1])
+    scaled_model = scale_model(column_density,nrs1_avg,nrs2_avg,vacuum_wavelength,nrs_wave[i,1])
 
 
     start_index1 = np.where(nrs_wave[i,0] >= low_limit)[0][0]
@@ -194,9 +239,9 @@ for i in range(len(files)):
     interval_intensities2 = nrs2_avg[start_index2:end_index2+1]
     model_wave_short = []
     model_flux_short = []
-    for k in range(len(vacuum_wavelength)):
+    for k in range(len(waves[0])):
         if vacuum_wavelength[k]>= low_limit and vacuum_wavelength[k]<= up_limit:
-            model_wave_short.append(vacuum_wavelength[k])
+            model_wave_short.append(waves[0][k])
             model_flux_short.append(scaled_model[k])
 
     plt.figure(i)
@@ -207,6 +252,12 @@ for i in range(len(files)):
     #plt.axvline(x=3985.5e-9, color='r', linestyle='--', label='Vertical Line')
 
 plt.show()
+
+plt.figure(1)
+plt.imshow(nrs_data[6,1][2500,:,:])
+plt.colorbar()
+plt.show()
+
 
 '''
 for i in range(len(files)):
